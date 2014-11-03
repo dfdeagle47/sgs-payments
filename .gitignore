@@ -1,0 +1,36 @@
+### Dot files ###
+.*
+
+### Git ###
+!/.gitignore
+!/.gitmodules
+
+### Logs ###
+logs
+*.log
+
+### Temp src ###
+_src
+
+### Runtime data ###
+pids
+*.pid
+*.seed
+
+### NPM dependency directory ###
+node_modules
+
+### JSHint ###
+!/.jshintrc
+
+### JSCSrc ###
+!/.jscsrc
+
+### Travis ###
+!/.travis.yml
+
+### Test reports ###
+test/coverage
+
+### OAuth test keys ###
+test/fixtures/api-key.txt

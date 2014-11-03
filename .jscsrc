@@ -1,0 +1,7 @@
+{
+	"preset": "google",
+	"validateIndentation": "\t",
+
+	"maximumLineLength": 120,
+	"requireCamelCaseOrUpperCaseIdentifiers": false
+}
