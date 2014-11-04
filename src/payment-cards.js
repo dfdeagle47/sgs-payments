@@ -55,25 +55,7 @@ module.exports = (function () {
 				}
 
 				if (this.checkCard(card) !== true) {
-					return this.stripe.customers.deleteCard(
-						customerId,
-						card.id,
-						function (e, confirmation) {
-							if (e) {
-								return callback(e);
-							}
-
-							if (confirmation.deleted !== true || confirmation.id !== card.id) {
-								return callback(
-									new Error('STRIPE: Card ' + card.id + ' couldn\'t be deleted!')
-								);
-							}
-
-							callback(
-								new Error('STRIPE: Card ' + card.id + ' failed security checks!')
-							);
-						}
-					);
+					return this.deleteCard(customerId, card.id, callback);
 				}
 
 				async.waterfall([
@@ -87,28 +69,7 @@ module.exports = (function () {
 						);
 					}.bind(this),
 					function (customer, cb) {
-						var oldDefaultCards = customer.cards.data
-							.filter(function (card) {
-								return card.id !== customer.default_card;
-							}
-						);
-
-						// console.log('CARDS=', customer.cards.data);
-						// console.log('DEFAULT_CARD=', customer.default_card);
-						// console.log('OLD_DEFAULT_CARDS=', oldDefaultCards);
-						// console.log('OLD_DEFAULT_CARD=', oldDefaultCards[0]);
-
-						if (oldDefaultCards.length < 1) {
-							return cb(null);
-						}
-
-						var oldDefaultCard = oldDefaultCards[0];
-
-						this.stripe.customers.deleteCard(
-							customerId,
-							oldDefaultCard,
-							cb
-						);
+						this.deleteNonDefaultCards(customer, cb);
 					}.bind(this),
 				], function (e) {
 					if (e) {
@@ -150,6 +111,40 @@ module.exports = (function () {
 		}
 
 		return isValid;
+	};
+
+	PaymentCards.prototype.deleteNonDefaultCards = function (customer, callback) {
+		var cards = customer.cards.data;
+
+		async.each(cards, function (card, cb) {
+			if (card.id === customer.default_card) {
+				return cb(null);
+			}
+
+			this.deleteCard(customer.id, card.id, cb);
+		}.bind(this), callback);
+	};
+
+	PaymentCards.prototype.deleteCard = function (customerId, cardId, callback) {
+		this.stripe.customers.deleteCard(
+			customerId,
+			cardId,
+			function (e, confirmation) {
+				if (e) {
+					return callback(e);
+				}
+
+				if (confirmation.deleted !== true || confirmation.id !== cardId) {
+					return callback(
+						new Error('STRIPE: Card ' + cardId + ' couldn\'t be deleted!')
+					);
+				}
+
+				callback(
+					new Error('STRIPE: Card ' + cardId + ' failed security checks!')
+				);
+			}
+		);
 	};
 
 	return PaymentCards;

@@ -1,5 +1,5 @@
-var SGSPayments = require('../src/sgs-payments');
-// var SGSPayments = require('./coverage/instrument/src/sgs-payments');
+// var SGSPayments = require('../src/sgs-payments');
+var SGSPayments = require('./coverage/instrument/src/sgs-payments');
 var account = require('./fixtures/account');
 
 var assert = require('assert');
@@ -7,7 +7,7 @@ var assert = require('assert');
 module.exports = function () {
 	'use strict';
 
-	var validateCustomer = function (callback) {
+	var validateCustomer = function (numCards, callback) {
 		SGSPayments.getCustomer(
 			account.customerInfo.id,
 			function (e, customer) {
@@ -18,10 +18,16 @@ module.exports = function () {
 				account.customerInfo = customer;
 
 				assert.strictEqual(customer.id.substr(0, 4), 'cus_');
-				assert.strictEqual(customer.default_card.substr(0, 5), 'card_');
+
+				if (numCards !== 0) {
+					assert.strictEqual(customer.default_card.substr(0, 5), 'card_');
+				}
+				else {
+					assert.strictEqual(customer.default_card, null);
+				}
 
 				assert.strictEqual(Array.isArray(customer.cards.data), true);
-				assert.strictEqual(customer.cards.data.length, 1);
+				assert.strictEqual(customer.cards.data.length, numCards);
 
 				callback(null);
 			}
@@ -43,6 +49,7 @@ module.exports = function () {
 			assert.strictEqual(card.card.id.substr(0, 5), 'card_');
 			assert.strictEqual(card.card.customer, null);
 			assert.strictEqual(typeof card.card.fingerprint, 'string');
+
 			callback(null);
 		});
 	});
@@ -57,11 +64,7 @@ module.exports = function () {
 
 			account.customerInfo = customer;
 
-			assert.strictEqual(customer.id.substr(0, 4), 'cus_');
-			assert.strictEqual(customer.default_card, null);
-			assert.strictEqual(Array.isArray(customer.cards.data), true);
-			assert.strictEqual(customer.cards.data.length, 0);
-			callback(null);
+			validateCustomer(0, callback);
 		});
 	});
 
@@ -73,7 +76,8 @@ module.exports = function () {
 			function (e, card) {
 				assert.strictEqual(e instanceof Error, true);
 				assert.strictEqual(card === undefined, true);
-				callback(null);
+
+				validateCustomer(0, callback);
 			}
 		);
 	});
@@ -91,7 +95,7 @@ module.exports = function () {
 				assert.strictEqual(card.id, account.cardInfo.id);
 				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
 
-				validateCustomer(callback);
+				validateCustomer(1, callback);
 			}
 		);
 	});
@@ -110,7 +114,7 @@ module.exports = function () {
 				assert.strictEqual(card.id, account.customerInfo.default_card);
 				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
 
-				validateCustomer(callback);
+				validateCustomer(1, callback);
 			}
 		);
 	});
@@ -129,7 +133,7 @@ module.exports = function () {
 			assert.strictEqual(card.card.customer, null);
 			assert.strictEqual(typeof card.card.fingerprint, 'string');
 
-			validateCustomer(callback);
+			validateCustomer(1, callback);
 		});
 	});
 
@@ -147,7 +151,7 @@ module.exports = function () {
 				assert.strictEqual(card.id, account.customerInfo.default_card);
 				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
 
-				validateCustomer(callback);
+				validateCustomer(1, callback);
 			}
 		);
 	});
@@ -181,7 +185,7 @@ module.exports = function () {
 					assert.strictEqual(e instanceof Error, true);
 					assert.strictEqual(card === undefined, true);
 
-					validateCustomer(callback);
+					validateCustomer(1, callback);
 				}
 			);
 		});
@@ -202,7 +206,7 @@ module.exports = function () {
 				assert.strictEqual(charge.customer, account.customerInfo.id);
 				assert.strictEqual(charge.amount, account.chargeInfo.amount);
 
-				validateCustomer(callback);
+				validateCustomer(1, callback);
 			}
 		);
 	});
