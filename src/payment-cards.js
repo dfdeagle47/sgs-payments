@@ -43,25 +43,41 @@ module.exports = (function () {
 	};
 
 	PaymentCards.prototype.replaceOrCreateCard = function (customerId, tokenId, callback) {
-		this.stripe.customers.update(customerId, {
-			card: tokenId
-		}, function (e, customer) {
-			if (e) {
-				return callback(e);
-			}
+		this.stripe.customers.createCard(
+			customerId,
+			{
+				card: tokenId
+			},
+			function (e, card) {
+				if (e) {
+					return callback(e);
+				}
 
-			var defaultCard = _.findWhere(customer.cards.data, {
-				id: customer.default_card
-			});
+				if (this.checkCard(card) !== true) {
+					return callback(
+						new Error('STRIPE: Card ' + card.id + ' failed security checks!')
+					);
+				}
 
-			if (this.checkCard(defaultCard) !== true) {
-				return callback(
-					new Error('STRIPE: Card ' + defaultCard.id + ' failed security checks!')
+				this.stripe.customers.update(
+					customerId,
+					{
+						default_card: card.id
+					},
+					function (e, customer) {
+						if (e) {
+							return callback(e);
+						}
+
+						var defaultCard = _.findWhere(customer.cards.data, {
+							id: customer.default_card
+						});
+
+						callback(null, defaultCard);
+					}
 				);
-			}
-
-			callback(null, defaultCard);
-		}.bind(this));
+			}.bind(this)
+		);
 	};
 
 	PaymentCards.prototype.getCard = function (tokenId, callback) {

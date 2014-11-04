@@ -1,5 +1,5 @@
-// var SGSPayments = require('../src/sgs-payments');
-var SGSPayments = require('./coverage/instrument/src/sgs-payments');
+var SGSPayments = require('../src/sgs-payments');
+// var SGSPayments = require('./coverage/instrument/src/sgs-payments');
 
 var chargeScenario = require('./charge-scenario');
 
