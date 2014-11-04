@@ -233,7 +233,6 @@ module.exports = function () {
 				assert.strictEqual(charge.card.id, account.cardInfo.id);
 				assert.strictEqual(charge.card.fingerprint, account.cardInfo.fingerprint);
 				assert.strictEqual(charge.customer, account.customerInfo.id);
-				assert.strictEqual(charge.amount, account.chargeInfo.amount);
 
 				validateCustomer(1, callback);
 			}
