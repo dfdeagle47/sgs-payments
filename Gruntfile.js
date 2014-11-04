@@ -89,7 +89,7 @@ function GruntTasks (grunt) {
 	grunt.registerTask('verify', [
 		'jsonlint',
 		'jshint',
-		// 'jscs'
+		'jscs'
 	]);
 
 	grunt.registerTask('test', [

@@ -11,7 +11,7 @@ module.exports = (function () {
 		var chargePlans = [];
 
 		this.plans.forEach(function (plan) {
-			if(this.isSubscriptionPlan(plan)) {
+			if (this.isSubscriptionPlan(plan)) {
 				subscriptionPlans.push(plan);
 			}
 			else {
