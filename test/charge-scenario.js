@@ -36,7 +36,8 @@ module.exports = function () {
 	};
 
 	it('Create a customer.', function (callback) {
-		SGSPayments.createCustomer({
+		this.timeout(10 * 1000);
+		SGSPayments.getOrCreateCustomer({
 			email: account.email
 		}, function (e, customer) {
 			if (e) {
@@ -48,6 +49,18 @@ module.exports = function () {
 			validateCustomer(0, callback);
 		});
 	});
+
+	// it('Fail if duplicate customer.', function (callback) {
+	// 	this.timeout(10 * 1000);
+	// 	SGSPayments.getOrCreateCustomer({
+	// 		email: account.email
+	// 	}, function (e, customer) {
+	// 		assert.strictEqual(e instanceof Error, true);
+	// 		assert.strictEqual(customer === undefined, true);
+
+	// 		validateCustomer(0, callback);
+	// 	});
+	// });
 
 	it('Fail if no token or default card are specified.', function (callback) {
 		this.timeout(10 * 1000);
