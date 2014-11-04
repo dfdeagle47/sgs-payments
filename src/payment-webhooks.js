@@ -15,7 +15,7 @@ module.exports = (function () {
 		}
 
 		this.stripe.events.retrieve(event.id, function (e, event) {
-			if (e) {
+			if (e || !event) {
 				return res.status(500).send();
 			}
 
