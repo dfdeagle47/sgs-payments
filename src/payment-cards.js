@@ -1,3 +1,4 @@
+var async = require('async');
 var _ = require('underscore');
 
 module.exports = (function () {
@@ -54,28 +55,68 @@ module.exports = (function () {
 				}
 
 				if (this.checkCard(card) !== true) {
-					return callback(
-						new Error('STRIPE: Card ' + card.id + ' failed security checks!')
+					return this.stripe.customers.deleteCard(
+						customerId,
+						card.id,
+						function (e, confirmation) {
+							if (e) {
+								return callback(e);
+							}
+
+							if (confirmation.deleted !== true || confirmation.id !== card.id) {
+								return callback(
+									new Error('STRIPE: Card ' + card.id + ' couldn\'t be deleted!')
+								);
+							}
+
+							callback(
+								new Error('STRIPE: Card ' + card.id + ' failed security checks!')
+							);
+						}
 					);
 				}
 
-				this.stripe.customers.update(
-					customerId,
-					{
-						default_card: card.id
-					},
-					function (e, customer) {
-						if (e) {
-							return callback(e);
+				async.waterfall([
+					function (cb) {
+						this.stripe.customers.update(
+							customerId,
+							{
+								default_card: card.id
+							},
+							cb
+						);
+					}.bind(this),
+					function (customer, cb) {
+						var oldDefaultCards = customer.cards.data
+							.filter(function (card) {
+								return card.id !== customer.default_card;
+							}
+						);
+
+						// console.log('CARDS=', customer.cards.data);
+						// console.log('DEFAULT_CARD=', customer.default_card);
+						// console.log('OLD_DEFAULT_CARDS=', oldDefaultCards);
+						// console.log('OLD_DEFAULT_CARD=', oldDefaultCards[0]);
+
+						if (oldDefaultCards.length < 1) {
+							return cb(null);
 						}
 
-						var defaultCard = _.findWhere(customer.cards.data, {
-							id: customer.default_card
-						});
+						var oldDefaultCard = oldDefaultCards[0];
 
-						callback(null, defaultCard);
+						this.stripe.customers.deleteCard(
+							customerId,
+							oldDefaultCard,
+							cb
+						);
+					}.bind(this),
+				], function (e) {
+					if (e) {
+						return callback(e);
 					}
-				);
+
+					callback(null, card);
+				});
 			}.bind(this)
 		);
 	};

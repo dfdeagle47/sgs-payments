@@ -7,6 +7,27 @@ var assert = require('assert');
 module.exports = function () {
 	'use strict';
 
+	var validateCustomer = function (callback) {
+		SGSPayments.getCustomer(
+			account.customerInfo.id,
+			function (e, customer) {
+				if (e) {
+					return callback(e);
+				}
+
+				account.customerInfo = customer;
+
+				assert.strictEqual(customer.id.substr(0, 4), 'cus_');
+				assert.strictEqual(customer.default_card.substr(0, 5), 'card_');
+
+				assert.strictEqual(Array.isArray(customer.cards.data), true);
+				assert.strictEqual(customer.cards.data.length, 1);
+
+				callback(null);
+			}
+		);
+	};
+
 	it('Create a card token.', function (callback) {
 		SGSPayments.stripe.tokens.create({
 			card: account.card
@@ -45,6 +66,7 @@ module.exports = function () {
 	});
 
 	it('Fail when adding card to customer without specifying token.', function (callback) {
+		this.timeout(10 * 1000);
 		SGSPayments.getOrCreateCard(
 			account.customerInfo,
 			null,
@@ -57,7 +79,7 @@ module.exports = function () {
 	});
 
 	it('Add card to customer.', function (callback) {
-		this.timeout(5 * 1000);
+		this.timeout(10 * 1000);
 		SGSPayments.getOrCreateCard(
 			account.customerInfo,
 			account.cardToken,
@@ -68,28 +90,14 @@ module.exports = function () {
 
 				assert.strictEqual(card.id, account.cardInfo.id);
 				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
-				callback(null);
+
+				validateCustomer(callback);
 			}
 		);
 	});
 
-	it('Find updated customer.', function (callback) {
-		SGSPayments.getCustomer(account.customerInfo.id, function (e, customer) {
-			if (e) {
-				return callback(e);
-			}
-
-			account.customerInfo = customer;
-
-			assert.strictEqual(customer.id.substr(0, 4), 'cus_');
-			assert.notStrictEqual(customer.default_card, null);
-			assert.strictEqual(Array.isArray(customer.cards.data), true);
-			assert.strictEqual(customer.cards.data.length, 1);
-			callback(null);
-		});
-	});
-
 	it('Fallback to customer default card.', function (callback) {
+		this.timeout(10 * 1000);
 		SGSPayments.getOrCreateCard(
 			account.customerInfo,
 			null,
@@ -101,12 +109,14 @@ module.exports = function () {
 				assert.strictEqual(card.id, account.cardInfo.id);
 				assert.strictEqual(card.id, account.customerInfo.default_card);
 				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
-				callback(null);
+
+				validateCustomer(callback);
 			}
 		);
 	});
 
 	it('Add a duplicate card.', function (callback) {
+		this.timeout(10 * 1000);
 		SGSPayments.stripe.tokens.create({
 			card: account.card
 		}, function (e, card) {
@@ -118,11 +128,13 @@ module.exports = function () {
 			assert.strictEqual(card.card.id.substr(0, 5), 'card_');
 			assert.strictEqual(card.card.customer, null);
 			assert.strictEqual(typeof card.card.fingerprint, 'string');
-			callback(null);
+
+			validateCustomer(callback);
 		});
 	});
 
 	it('Don\'t add card to customer if duplicate.', function (callback) {
+		this.timeout(10 * 1000);
 		SGSPayments.getOrCreateCard(
 			account.customerInfo,
 			null,
@@ -134,13 +146,14 @@ module.exports = function () {
 				assert.strictEqual(card.id, account.cardInfo.id);
 				assert.strictEqual(card.id, account.customerInfo.default_card);
 				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
-				callback(null);
+
+				validateCustomer(callback);
 			}
 		);
 	});
 
 	it('Fail when adding card that fails CVC security check.', function (callback) {
-		this.timeout(5 * 1000);
+		this.timeout(10 * 1000);
 		SGSPayments.stripe.tokens.create({
 			card: {
 				number: '4000000000000101',
@@ -167,13 +180,15 @@ module.exports = function () {
 				function (e, card) {
 					assert.strictEqual(e instanceof Error, true);
 					assert.strictEqual(card === undefined, true);
-					callback(null);
+
+					validateCustomer(callback);
 				}
 			);
 		});
 	});
 
 	it('Charge the customer.', function (callback) {
+		this.timeout(10 * 1000);
 		SGSPayments.createCharge(
 			account.customerInfo,
 			account.chargeInfo,
@@ -186,7 +201,8 @@ module.exports = function () {
 				assert.strictEqual(charge.card.fingerprint, account.cardInfo.fingerprint);
 				assert.strictEqual(charge.customer, account.customerInfo.id);
 				assert.strictEqual(charge.amount, account.chargeInfo.amount);
-				callback(null);
+
+				validateCustomer(callback);
 			}
 		);
 	});
