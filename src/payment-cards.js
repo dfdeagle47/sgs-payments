@@ -1,4 +1,3 @@
-var async = require('async');
 var _ = require('underscore');
 
 module.exports = (function () {
@@ -58,26 +57,19 @@ module.exports = (function () {
 					return this.deleteCard(customerId, card.id, callback);
 				}
 
-				async.waterfall([
-					function (cb) {
-						this.stripe.customers.update(
-							customerId,
-							{
-								default_card: card.id
-							},
-							cb
-						);
-					}.bind(this),
-					function (customer, cb) {
-						this.deleteNonDefaultCards(customer, cb);
-					}.bind(this),
-				], function (e) {
-					if (e) {
-						return callback(e);
-					}
+				this.stripe.customers.update(
+					customerId,
+					{
+						default_card: card.id
+					},
+					function (e) {
+						if (e) {
+							return callback(e);
+						}
 
-					callback(null, card);
-				});
+						callback(null, card);
+					}
+				);
 			}.bind(this)
 		);
 	};
@@ -111,18 +103,6 @@ module.exports = (function () {
 		}
 
 		return isValid;
-	};
-
-	PaymentCards.prototype.deleteNonDefaultCards = function (customer, callback) {
-		var cards = customer.cards.data;
-
-		async.each(cards, function (card, cb) {
-			if (card.id === customer.default_card) {
-				return cb(null);
-			}
-
-			this.deleteCard(customer.id, card.id, cb);
-		}.bind(this), callback);
 	};
 
 	PaymentCards.prototype.deleteCard = function (customerId, cardId, callback) {

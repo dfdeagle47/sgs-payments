@@ -17,6 +17,7 @@ module.exports = function () {
 
 				account.customerInfo = customer;
 
+				assert.strictEqual(customer.email, account.email);
 				assert.strictEqual(customer.id.substr(0, 4), 'cus_');
 
 				if (numCards !== 0) {
@@ -34,26 +35,6 @@ module.exports = function () {
 		);
 	};
 
-	it('Create a card token.', function (callback) {
-		SGSPayments.stripe.tokens.create({
-			card: account.card
-		}, function (e, card) {
-			if (e) {
-				return callback(e);
-			}
-
-			account.cardInfo = card.card;
-			account.cardToken = card.id;
-
-			assert.strictEqual(card.id.substr(0, 4), 'tok_');
-			assert.strictEqual(card.card.id.substr(0, 5), 'card_');
-			assert.strictEqual(card.card.customer, null);
-			assert.strictEqual(typeof card.card.fingerprint, 'string');
-
-			callback(null);
-		});
-	});
-
 	it('Create a customer.', function (callback) {
 		SGSPayments.createCustomer({
 			email: account.email
@@ -68,7 +49,7 @@ module.exports = function () {
 		});
 	});
 
-	it('Fail when adding card to customer without specifying token.', function (callback) {
+	it('Fail if no token or default card are specified.', function (callback) {
 		this.timeout(10 * 1000);
 		SGSPayments.getOrCreateCard(
 			account.customerInfo,
@@ -82,62 +63,41 @@ module.exports = function () {
 		);
 	});
 
-	it('Add card to customer.', function (callback) {
-		this.timeout(10 * 1000);
-		SGSPayments.getOrCreateCard(
-			account.customerInfo,
-			account.cardToken,
-			function (e, card) {
-				if (e) {
-					return callback(e);
-				}
-
-				assert.strictEqual(card.id, account.cardInfo.id);
-				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
-
-				validateCustomer(1, callback);
-			}
-		);
-	});
-
-	it('Fallback to customer default card.', function (callback) {
-		this.timeout(10 * 1000);
-		SGSPayments.getOrCreateCard(
-			account.customerInfo,
-			null,
-			function (e, card) {
-				if (e) {
-					return callback(e);
-				}
-
-				assert.strictEqual(card.id, account.cardInfo.id);
-				assert.strictEqual(card.id, account.customerInfo.default_card);
-				assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
-
-				validateCustomer(1, callback);
-			}
-		);
-	});
-
-	it('Add a duplicate card.', function (callback) {
+	it('Add valid card to customer.', function (callback) {
 		this.timeout(10 * 1000);
 		SGSPayments.stripe.tokens.create({
 			card: account.card
-		}, function (e, card) {
+		}, function (e, token) {
 			if (e) {
 				return callback(e);
 			}
 
-			assert.strictEqual(card.id.substr(0, 4), 'tok_');
-			assert.strictEqual(card.card.id.substr(0, 5), 'card_');
-			assert.strictEqual(card.card.customer, null);
-			assert.strictEqual(typeof card.card.fingerprint, 'string');
+			account.cardInfo = token.card;
+			account.cardToken = token.id;
 
-			validateCustomer(1, callback);
+			assert.strictEqual(token.id.substr(0, 4), 'tok_');
+			assert.strictEqual(token.card.id.substr(0, 5), 'card_');
+			assert.strictEqual(token.card.customer, null);
+			assert.strictEqual(typeof token.card.fingerprint, 'string');
+
+			SGSPayments.getOrCreateCard(
+				account.customerInfo,
+				account.cardToken,
+				function (e, card) {
+					if (e) {
+						return callback(e);
+					}
+
+					assert.strictEqual(card.id, account.cardInfo.id);
+					assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
+
+					validateCustomer(1, callback);
+				}
+			);
 		});
 	});
 
-	it('Don\'t add card to customer if duplicate.', function (callback) {
+	it('Fallback to customer default card if token not specified.', function (callback) {
 		this.timeout(10 * 1000);
 		SGSPayments.getOrCreateCard(
 			account.customerInfo,
@@ -156,7 +116,42 @@ module.exports = function () {
 		);
 	});
 
-	it('Fail when adding card that fails CVC security check.', function (callback) {
+	it('No-op if card is duplicate of default card.', function (callback) {
+		this.timeout(10 * 1000);
+		SGSPayments.stripe.tokens.create({
+			card: account.card
+		}, function (e, token) {
+			if (e) {
+				return callback(e);
+			}
+
+			account.duplicateCardInfo = token.card;
+			account.duplicateCardToken = token.id;
+
+			assert.strictEqual(token.id.substr(0, 4), 'tok_');
+			assert.strictEqual(token.card.id.substr(0, 5), 'card_');
+			assert.strictEqual(token.card.customer, null);
+			assert.strictEqual(typeof token.card.fingerprint, 'string');
+
+			SGSPayments.getOrCreateCard(
+				account.customerInfo,
+				account.duplicateCardToken,
+				function (e, card) {
+					if (e) {
+						return callback(e);
+					}
+
+					assert.strictEqual(card.id, account.cardInfo.id);
+					assert.strictEqual(card.id, account.customerInfo.default_card);
+					assert.strictEqual(card.fingerprint, account.cardInfo.fingerprint);
+
+					validateCustomer(1, callback);
+				}
+			);
+		});
+	});
+
+	it('Fail if card fails CVC security check.', function (callback) {
 		this.timeout(10 * 1000);
 		SGSPayments.stripe.tokens.create({
 			card: {
@@ -165,22 +160,56 @@ module.exports = function () {
 				exp_year: account.card.exp_year,
 				cvc: account.card.cvc
 			}
-		}, function (e, card) {
+		}, function (e, token) {
 			if (e) {
 				return callback(e);
 			}
 
-			account.invalidCVCCardInfo = card.card;
-			account.invalidCVCCardToken = card.id;
+			account.invalidCVCCardInfo = token.card;
+			account.invalidCVCCardToken = token.id;
 
-			assert.strictEqual(card.id.substr(0, 4), 'tok_');
-			assert.strictEqual(card.card.id.substr(0, 5), 'card_');
-			assert.strictEqual(card.card.customer, null);
-			assert.strictEqual(typeof card.card.fingerprint, 'string');
+			assert.strictEqual(token.id.substr(0, 4), 'tok_');
+			assert.strictEqual(token.card.id.substr(0, 5), 'card_');
+			assert.strictEqual(token.card.customer, null);
+			assert.strictEqual(typeof token.card.fingerprint, 'string');
 
 			SGSPayments.getOrCreateCard(
 				account.customerInfo,
 				account.invalidCVCCardToken,
+				function (e, card) {
+					assert.strictEqual(e instanceof Error, true);
+					assert.strictEqual(card === undefined, true);
+
+					validateCustomer(1, callback);
+				}
+			);
+		});
+	});
+
+	it('Fail if token is not of type card.', function (callback) {
+		this.timeout(10 * 1000);
+		SGSPayments.stripe.tokens.create({
+			bank_account: {
+				country: 'US',
+				currency: 'usd',
+				routing_number: '110000000',
+				account_number: '000123456789'
+			}
+		}, function (e, token) {
+			if (e) {
+				return callback(e);
+			}
+
+			account.bankAccountInfo = token.card;
+			account.bankAccountToken = token.id;
+
+			assert.strictEqual(token.id.substr(0, 5), 'btok_');
+			assert.strictEqual(token.bank_account.id.substr(0, 3), 'ba_');
+			assert.strictEqual(typeof token.bank_account.fingerprint, 'string');
+
+			SGSPayments.getOrCreateCard(
+				account.customerInfo,
+				account.bankAccountToken,
 				function (e, card) {
 					assert.strictEqual(e instanceof Error, true);
 					assert.strictEqual(card === undefined, true);
