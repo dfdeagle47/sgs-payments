@@ -10,7 +10,7 @@ module.exports = (function () {
 			id: customer.default_card
 		});
 
-		if (typeof tokenId !== 'string' || tokenId.length) {
+		if (typeof tokenId !== 'string' || !tokenId.length) {
 			if (defaultCard === undefined) {
 				return callback(
 					new Error('STRIPE: Missing token or card for customer ' + customer.id + '!')
@@ -45,18 +45,22 @@ module.exports = (function () {
 	PaymentCards.prototype.replaceOrCreateCard = function (customerId, tokenId, callback) {
 		this.stripe.customers.update(customerId, {
 			card: tokenId
-		}, function (e, card) {
+		}, function (e, customer) {
 			if (e) {
 				return callback(e);
 			}
 
-			if (this.checkCard(card) !== true) {
+			var defaultCard = _.findWhere(customer.cards.data, {
+				id: customer.default_card
+			});
+
+			if (this.checkCard(defaultCard) !== true) {
 				return callback(
-					new Error('STRIPE: Card ' + card.id + ' failed security checks!')
+					new Error('STRIPE: Card ' + defaultCard.id + ' failed security checks!')
 				);
 			}
 
-			callback(null, card);
+			callback(null, defaultCard);
 		}.bind(this));
 	};
 

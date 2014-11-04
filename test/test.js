@@ -1,10 +1,11 @@
+// var SGSPayments = require('../src/sgs-payments');
 var SGSPayments = require('./coverage/instrument/src/sgs-payments');
 
-var customerTests = require('./customer-tests');
-var chargeTests = require('./charge-tests');
+var chargeScenario = require('./charge-scenario');
 
 var assert = require('assert');
 var stripe = require('stripe');
+var async = require('async');
 var path = require('path');
 var fs = require('fs');
 
@@ -23,12 +24,21 @@ describe('Testing the payments module:', function () {
 		assert.strictEqual(SGSPayments.stripe instanceof stripe, true);
 	});
 
-	describe('Customers:', function () {
-		customerTests();
+	before('Clear customers', function (callback) {
+		this.timeout(10 * 1000);
+		SGSPayments.stripe.customers.list({}, function (e, customers) {
+			if (e) {
+				return callback(e);
+			}
+
+			async.each(customers.data, function (customer, cb) {
+				SGSPayments.stripe.customers.del(customer.id, cb);
+			}, callback);
+		});
 	});
 
-	describe('Charges:', function () {
-		chargeTests();
+	describe('Charge customer scenario:', function () {
+		chargeScenario();
 	});
 
 });

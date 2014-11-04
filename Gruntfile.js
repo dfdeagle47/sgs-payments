@@ -103,7 +103,7 @@ function GruntTasks (grunt) {
 	grunt.registerTask('ci', [
 		'verify',
 		'test',
-		'coveralls'
+		// 'coveralls'
 	]);
 }
 
