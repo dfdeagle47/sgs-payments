@@ -1,6 +1,13 @@
 {
 
 	"email": "info@sagacify.com",
+
+	"bankAccount": {
+		"country": "US",
+		"currency": "usd",
+		"routing_number": "110000000",
+		"account_number": "000123456789"
+	},
 	"card": {
 		"number": "4242424242424242",
 		"exp_month": "12",

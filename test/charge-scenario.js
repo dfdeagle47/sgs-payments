@@ -202,12 +202,7 @@ module.exports = function () {
 	it('Fail if token is not of type card.', function (callback) {
 		this.timeout(10 * 1000);
 		SGSPayments.stripe.tokens.create({
-			bank_account: {
-				country: 'US',
-				currency: 'usd',
-				routing_number: '110000000',
-				account_number: '000123456789'
-			}
+			bank_account: account.bankAccount
 		}, function (e, token) {
 			if (e) {
 				return callback(e);

@@ -4,11 +4,21 @@ module.exports = (function () {
 	function PaymentCustomers () {}
 
 	PaymentCustomers.prototype.getOrCreateCustomer = function (customer, callback) {
-		if (typeof customer.id === 'string') {
-			return this.getCustomer(customer.id, callback);
+		if (!customer.id || typeof customer.id !== 'string') {
+			return this.createCustomer(customer, callback);
 		}
 
-		this.createCustomer(customer, callback);
+		this.getCustomer(customer.id, function (e, customer) {
+			if (e) {
+				return callback(e);
+			}
+
+			if (customer) {
+				return callback(null, customer);
+			}
+
+			this.createCustomer(customer, callback);
+		});
 	};
 
 	PaymentCustomers.prototype.getCustomer = function (customerId, callback) {
