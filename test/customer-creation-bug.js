@@ -28,7 +28,7 @@ var clearCustomers = function () {
 				throw e;
 			}
 
-			createCustomer('info@sagacify.com');
+			createCustomer('info2@sagacify.com');
 		});
 	});
 };
